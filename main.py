@@ -19,10 +19,13 @@ from PyQt5.QtGui import QIcon
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+from matplotlib.colors import to_rgb, to_hex
 
 from matplotlib.patches import Circle
 
 from dataclasses import dataclass
+
+color_list = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black']
 
 def coord_to_float(deg, primes):
     return deg + float(primes)/60
@@ -92,6 +95,7 @@ class DotPainter:
     def remove(self):
         try:
             self.dot.remove()
+            self.ax.figure.canvas.draw()
         except:
             pass
 
@@ -124,6 +128,7 @@ class CirclePainter:
     def remove(self):
         try:
             self.dot.remove()
+            self.ax.figure.canvas.draw()
         except:
             pass
 
@@ -187,6 +192,7 @@ class LinePainter:
     def remove(self):
         try:
             self.line.remove()
+            self.ax.figure.canvas.draw()
         except:
             pass
 
@@ -213,6 +219,30 @@ class LinePainter:
         return f'L: {min(angle1, angle2)}°, {max(angle1, angle2)}°'
 
 
+class GraphicListItem(QWidget):
+    def __init__(self, parent, text, color, graphic_item):
+        super().__init__(parent)
+        self.graphic_item = graphic_item
+
+        # Create the main widget and set the layout
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        self.label = QLabel(self)
+        self.label.setStyleSheet(f'color: {to_hex(color)}')
+        self.label.setText(text)
+        main_layout.addWidget(self.label)
+        self.del_button = QPushButton('Del', self)
+        self.del_button.clicked.connect(self.delete)
+        main_layout.addWidget(self.del_button)
+
+    def delete(self):
+        self.graphic_item.remove()
+        self.hide()
+
+    def setText(self, text):
+        self.label.setText(text)
+
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -221,6 +251,7 @@ class MyWindow(QMainWindow):
 
         self.current_tool = None
         self.current_label = None
+        self.current_color_index = 0
 
     def initUI(self):
         global IMAGE_EXTENT
@@ -280,20 +311,26 @@ class MyWindow(QMainWindow):
         # Show the window
         self.show()
 
+    def increase_color_index(self):
+        self.current_color_index = (self.current_color_index + 1) % len(color_list)
+
     def add_point(self):
-        self.current_label = QLabel('New Point', self.element_list_widget)
+        self.current_tool = DotPainter(self.ax, color=color_list[self.current_color_index])
+        self.current_label = GraphicListItem(self, 'New Point', color_list[self.current_color_index], self.current_tool)
+        self.increase_color_index()
         self.element_list_layout.addWidget(self.current_label)
-        self.current_tool = DotPainter(self.ax)
 
     def add_line(self):
-        self.current_label = QLabel('New Line', self.element_list_widget)
+        self.current_tool = LinePainter(self.ax, color=color_list[self.current_color_index])
+        self.current_label = GraphicListItem(self, 'New Line', color_list[self.current_color_index], self.current_tool)
+        self.increase_color_index()
         self.element_list_layout.addWidget(self.current_label)
-        self.current_tool = LinePainter(self.ax)
 
     def add_circle(self):
-        self.current_label = QLabel('New Circle', self.element_list_widget)
+        self.current_tool = CirclePainter(self.ax,color=color_list[self.current_color_index])
+        self.current_label = GraphicListItem(self, 'New Circle', color_list[self.current_color_index], self.current_tool)
+        self.increase_color_index()
         self.element_list_layout.addWidget(self.current_label)
-        self.current_tool = CirclePainter(self.ax)
 
     def on_canvas_click(self, event):
         # if we are zooming or panning, do nothing

@@ -276,11 +276,11 @@ class GraphicListItem(QWidget):
 
     def get_focus(self):
         self.label.setStyleSheet(self.label_style + f'border: 3px ridge {self.label_border_color};')
-        print('Got focus')
+        self.del_button.setEnabled(False)
 
     def lost_focus(self):
         self.label.setStyleSheet(self.label_style + 'border: 0px;')
-        print('Lost focus')
+        self.del_button.setEnabled(True)
 
 class MyWindow(QMainWindow):
     def __init__(self):
@@ -322,7 +322,7 @@ class MyWindow(QMainWindow):
 
             def home(self, *args):
                 self.home_action()
-                self._update_view()
+                #self._update_view()
 
         self.mpl_toolbar = MyNavToolbar(canvas, mpl_widget, lambda: self.change_region('Generale'))
         mpl_layout.addWidget(self.mpl_toolbar)
@@ -332,7 +332,6 @@ class MyWindow(QMainWindow):
 
         img = mpimg.imread(CHART_FILE)
         imgplot = self.ax.imshow(img)
-        print(imgplot.get_extent())
         IMAGE_EXTENT = imgplot.get_extent()
         self.ax.axis('off')
 

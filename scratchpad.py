@@ -1,4 +1,7 @@
 import sys
+
+from PyQt5.QtCore import QRegularExpression
+from PyQt5.QtGui import QRegularExpressionValidator
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QLabel, QMessageBox, QHBoxLayout, \
     QSizePolicy
 import re
@@ -30,15 +33,18 @@ class ScratchpadWindow(QWidget):
 
         # Create the expression input box and result display box
         self.expression_input = QLineEdit()
+        validator = QRegularExpressionValidator(QRegularExpression(r'^[0-9+\-*/.\s]*$'))
+        self.expression_input.setValidator(validator)
         self.expression_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.expression_input.returnPressed.connect(self.evaluate_expression)
+        self.expression_input.textChanged.connect(self.text_changed)
         top_layout.addWidget(self.expression_input)
 
         self.result_display = QLineEdit()
         self.result_display.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.result_display.setReadOnly(True)
         self.result_display.setStyleSheet("background-color: #ddffdd;")
-        self.result_display.setFixedWidth(50)
+        self.result_display.setFixedWidth(75)
         top_layout.addWidget(self.result_display)
 
         layout.addWidget(self.top_widget)
@@ -48,9 +54,18 @@ class ScratchpadWindow(QWidget):
 
         # Create the text area
         self.text_area = QTextEdit()
+        self.enter_pressed = False
         layout.addWidget(self.text_area)
 
+    def text_changed(self):
+        self.enter_pressed = False
+
     def evaluate_expression(self):
+        if self.enter_pressed:
+            # enter was pressed twice. Copy the result to the expression input
+            self.expression_input.setText(self.result_display.text())
+            self.expression_input.setCursorPosition(len(self.expression_input.text()))
+            return
         expression = self.expression_input.text()
         sanitized_expression = sanitize_input(expression)
 
@@ -62,7 +77,8 @@ class ScratchpadWindow(QWidget):
             result = eval(sanitized_expression)
             self.result_display.setText(str(round(result,1)))
         except Exception as e:
-            self.result_display.setText("Error: " + str(e))
+            QMessageBox.critical(self, "Invalid Expression", str(e))
+        self.enter_pressed = True
 
     def closeEvent(self, event):
         self.hide()
@@ -71,4 +87,5 @@ class ScratchpadWindow(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_window = ScratchpadWindow()
+    main_window.show()
     sys.exit(app.exec_())

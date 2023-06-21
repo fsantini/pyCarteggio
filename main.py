@@ -15,13 +15,14 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, \
     QSpacerItem, QSizePolicy, QComboBox
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QCloseEvent
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.colors import to_rgb, to_hex
 
 from matplotlib.patches import Circle
+from scratchpad import ScratchpadWindow
 
 from dataclasses import dataclass
 
@@ -325,6 +326,7 @@ class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PyCarteggio")
+        self.scratchpad = ScratchpadWindow()
         self.initUI()
 
         self.current_tool = None
@@ -364,6 +366,7 @@ class MyWindow(QMainWindow):
                 #self._update_view()
 
         self.mpl_toolbar = MyNavToolbar(canvas, mpl_widget, lambda: self.change_region('Generale'))
+        self.mpl_toolbar.addAction('Note', self.show_scratchpad)
         mpl_layout.addWidget(self.mpl_toolbar)
         mpl_layout.addWidget(canvas)
 
@@ -411,6 +414,14 @@ class MyWindow(QMainWindow):
 
         # Show the window
         self.show()
+
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.scratchpad.close()
+        super().closeEvent(a0)
+
+    def show_scratchpad(self):
+        self.scratchpad.show()
+        self.scratchpad.raise_()
 
     def change_region(self, region_name):
         if region_name == 'Generale':

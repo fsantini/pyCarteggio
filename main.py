@@ -125,6 +125,39 @@ class DotPainter:
 
 
 class CirclePainter:
+
+    class CenterCross:
+        def __init__(self, ax, x=0, y=0, size=5, color='red', linewidth=2):
+            self.ax = ax
+            self.x = x
+            self.y = y
+            self.color = color
+            self.size = size
+            self.center_cross_x = Line2D((self.x - 5, self.x + 5), (self.y, self.y), color=self.color, lw=linewidth)
+            self.center_cross_y = Line2D((self.x, self.x), (self.y - 5, self.y + 5), color=self.color, lw=linewidth)
+            self.ax.add_line(self.center_cross_x)
+            self.ax.add_line(self.center_cross_y)
+
+        def remove(self):
+            try:
+                self.center_cross_x.remove()
+                self.center_cross_y.remove()
+            except:
+                pass
+
+        def paint(self):
+            self.center_cross_x.set_data((self.x - self.size, self.x + self.size), (self.y, self.y))
+            self.center_cross_y.set_data((self.x, self.x), (self.y - self.size, self.y + self.size))
+
+        def set_coordinates(self, x, y):
+            self.x = x
+            self.y = y
+
+        def set_color(self, color):
+            self.center_cross_x.set(color=color)
+            self.center_cross_y.set(color=color)
+
+
     def __init__(self, ax, x=0, y=0, radius=1, color='red', linewidth=1):
         self.ax = ax
         self.x = x
@@ -132,6 +165,7 @@ class CirclePainter:
         self.color = color
         self.radius = radius
         self.circle = Circle((self.x, self.y), radius=self.radius, color=self.color, linewidth=linewidth, fill=False)
+        self.center_cross = self.CenterCross(ax, x, y, 20, color, 1)
         self.ax.add_patch(self.circle)
         self.click_left = self.set_coordinates
         self.click_right = self.set_radius_from_point
@@ -139,6 +173,7 @@ class CirclePainter:
     def remove(self):
         try:
             self.circle.remove()
+            self.center_cross.remove()
             self.ax.figure.canvas.draw()
         except:
             pass
@@ -147,6 +182,10 @@ class CirclePainter:
         self.circle.center = (self.x, self.y)
         self.circle.radius = self.radius
         self.circle.set(color=self.color)
+        self.center_cross.set_coordinates(self.x, self.y)
+        self.center_cross.set_color(self.color)
+        self.center_cross.paint()
+
         self.ax.figure.canvas.draw()
 
     def set_coordinates(self, x, y):

@@ -14,7 +14,7 @@ import matplotlib.image as mpimg
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, \
     QSpacerItem, QSizePolicy
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -218,23 +218,43 @@ class LinePainter:
         angle2 = (angle1 + 180) % 360
         return f'L: {min(angle1, angle2)}°, {max(angle1, angle2)}°'
 
+def luminance(rgb):
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+
 
 class GraphicListItem(QWidget):
+
+    edit_signal = pyqtSignal(QWidget, object)
+
     def __init__(self, parent, text, color, graphic_item):
         super().__init__(parent)
         self.graphic_item = graphic_item
 
         # Create the main widget and set the layout
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(0,0,0,0)
         main_layout.setSpacing(0)
         self.label = QLabel(self)
-        self.label.setStyleSheet(f'color: {to_hex(color)}')
+        self.label_border_color = to_hex(color)
+        if luminance(to_rgb(color)) > 0.5:
+            self.label_style = f'color: {to_hex(color)}; background-color: #696969; '
+        else:
+            self.label_style = f'color: {to_hex(color)}; '
         self.label.setText(text)
+        self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         main_layout.addWidget(self.label)
+        self.edit_button = QPushButton('Edit', self)
+        self.edit_button.clicked.connect(lambda : self.edit_signal.emit(self, self.graphic_item))
+        self.edit_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        main_layout.addWidget(self.edit_button)
         self.del_button = QPushButton('Del', self)
         self.del_button.clicked.connect(self.delete)
+        self.del_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         main_layout.addWidget(self.del_button)
+        main_layout.setStretch(0, 1)
+        main_layout.setStretch(1, 0)
+        main_layout.setStretch(2, 0)
+        self.get_focus()
 
     def delete(self):
         self.graphic_item.remove()
@@ -242,6 +262,14 @@ class GraphicListItem(QWidget):
 
     def setText(self, text):
         self.label.setText(text)
+
+    def get_focus(self):
+        self.label.setStyleSheet(self.label_style + f'border: 3px ridge {self.label_border_color};')
+        print('Got focus')
+
+    def lost_focus(self):
+        self.label.setStyleSheet(self.label_style + 'border: 0px;')
+        print('Lost focus')
 
 class MyWindow(QMainWindow):
     def __init__(self):
@@ -290,13 +318,13 @@ class MyWindow(QMainWindow):
         self.element_list_layout = QVBoxLayout(self.element_list_widget)
         self.toolbox_widget = QWidget(right_widget)
         self.toolbox_layout = QHBoxLayout(self.toolbox_widget)
-        self.point_add_button = QPushButton('Point', self.toolbox_widget)
+        self.point_add_button = QPushButton('Coordinata', self.toolbox_widget)
         self.point_add_button.clicked.connect(self.add_point)
         self.toolbox_layout.addWidget(self.point_add_button)
-        self.line_add_button = QPushButton('Line', self.toolbox_widget)
+        self.line_add_button = QPushButton('Linea', self.toolbox_widget)
         self.line_add_button.clicked.connect(self.add_line)
         self.toolbox_layout.addWidget(self.line_add_button)
-        self.circle_add_button = QPushButton('Circle', self.toolbox_widget)
+        self.circle_add_button = QPushButton('Cerchio', self.toolbox_widget)
         self.circle_add_button.clicked.connect(self.add_circle)
         self.toolbox_layout.addWidget(self.circle_add_button)
         right_layout.addWidget(self.element_list_widget)
@@ -304,6 +332,8 @@ class MyWindow(QMainWindow):
         right_layout.addItem(vertical_spacer)
         right_layout.addWidget(self.toolbox_widget)
         main_layout.addWidget(right_widget)
+        main_layout.setStretch(0, 1)
+        main_layout.setStretch(1, 0)
 
         # Set the main widget
         self.setCentralWidget(main_widget)
@@ -314,23 +344,31 @@ class MyWindow(QMainWindow):
     def increase_color_index(self):
         self.current_color_index = (self.current_color_index + 1) % len(color_list)
 
-    def add_point(self):
-        self.current_tool = DotPainter(self.ax, color=color_list[self.current_color_index])
-        self.current_label = GraphicListItem(self, 'New Point', color_list[self.current_color_index], self.current_tool)
+    def add_object(self, text, GraphicClass):
+        if self.current_label is not None:
+            self.current_label.lost_focus()
+        self.current_tool = GraphicClass(self.ax, color=color_list[self.current_color_index])
+        self.current_label = GraphicListItem(self, text, color_list[self.current_color_index], self.current_tool)
+        self.current_label.edit_signal.connect(self.change_edit)
         self.increase_color_index()
         self.element_list_layout.addWidget(self.current_label)
+
+    def add_point(self):
+        self.add_object('Nuovo punto', DotPainter)
 
     def add_line(self):
-        self.current_tool = LinePainter(self.ax, color=color_list[self.current_color_index])
-        self.current_label = GraphicListItem(self, 'New Line', color_list[self.current_color_index], self.current_tool)
-        self.increase_color_index()
-        self.element_list_layout.addWidget(self.current_label)
+        self.add_object('Nuova linea', LinePainter)
 
     def add_circle(self):
-        self.current_tool = CirclePainter(self.ax,color=color_list[self.current_color_index])
-        self.current_label = GraphicListItem(self, 'New Circle', color_list[self.current_color_index], self.current_tool)
-        self.increase_color_index()
-        self.element_list_layout.addWidget(self.current_label)
+        self.add_object('Nuovo cerchio', CirclePainter)
+
+    @pyqtSlot(QWidget, object)
+    def change_edit(self, label, graphic_item):
+        if self.current_label is not None:
+            self.current_label.lost_focus()
+        self.current_tool = graphic_item
+        self.current_label = label
+        self.current_label.get_focus()
 
     def on_canvas_click(self, event):
         # if we are zooming or panning, do nothing

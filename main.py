@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, \
-    QSpacerItem, QSizePolicy
+    QSpacerItem, QSizePolicy, QComboBox
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -26,6 +26,17 @@ from matplotlib.patches import Circle
 from dataclasses import dataclass
 
 color_list = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black']
+
+regions = {
+    'Giglio e Argentario': ((4216, 6318), (4132, 2901)),
+    'Talamone e Formiche G': ((4461, 5887), (2878, 1693)),
+    'Montecristo e Sc. Africa': ((520, 2225), (4132, 3488)),
+    'Follonica e Sparviero': ((3476, 5037), (1554, 274)),
+    'Elba': ((775, 2778), (1694, 478)),
+    'Piombino': ((2110, 3493), (899, 0)),
+    'Pianosa': ((479, 1214), (2679, 1911)),
+    'Marina di Grosseto': ((4383, 5697), (2196, 1186))
+}
 
 def coord_to_float(deg, primes):
     return deg + float(primes)/60
@@ -120,22 +131,22 @@ class CirclePainter:
         self.y = y
         self.color = color
         self.radius = radius
-        self.dot = Circle((self.x, self.y), radius=self.radius, color=self.color, linewidth=linewidth, fill=False)
-        self.ax.add_patch(self.dot)
+        self.circle = Circle((self.x, self.y), radius=self.radius, color=self.color, linewidth=linewidth, fill=False)
+        self.ax.add_patch(self.circle)
         self.click_left = self.set_coordinates
         self.click_right = self.set_radius_from_point
 
     def remove(self):
         try:
-            self.dot.remove()
+            self.circle.remove()
             self.ax.figure.canvas.draw()
         except:
             pass
 
     def paint(self):
-        self.dot.center = (self.x, self.y)
-        self.dot.radius = self.radius
-        self.dot.set(color=self.color)
+        self.circle.center = (self.x, self.y)
+        self.circle.radius = self.radius
+        self.circle.set(color=self.color)
         self.ax.figure.canvas.draw()
 
     def set_coordinates(self, x, y):
@@ -294,11 +305,26 @@ class MyWindow(QMainWindow):
 
         # Create the matplotlib axis
         fig = Figure()
+        fig.set_tight_layout(True)
         self.ax = fig.add_subplot(111)
+        #cb_registry = self.ax.callbacks
+        #cb_registry.connect('xlim_changed', self.on_lims_change)
+        #cb_registry.connect('ylim_changed', self.on_lims_change)
+
+
         canvas = FigureCanvas(fig)
         canvas.mpl_connect('button_press_event', self.on_canvas_click)  # Connect the mouse click even
 
-        self.mpl_toolbar = NavigationToolbar(canvas, mpl_widget)
+        class MyNavToolbar(NavigationToolbar):
+            def __init__(self, canvas, mpl_widget, custom_home_action):
+                super().__init__(canvas, mpl_widget)
+                self.home_action = custom_home_action
+
+            def home(self, *args):
+                self.home_action()
+                self._update_view()
+
+        self.mpl_toolbar = MyNavToolbar(canvas, mpl_widget, lambda: self.change_region('Generale'))
         mpl_layout.addWidget(self.mpl_toolbar)
         mpl_layout.addWidget(canvas)
 
@@ -331,6 +357,13 @@ class MyWindow(QMainWindow):
         vertical_spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         right_layout.addItem(vertical_spacer)
         right_layout.addWidget(self.toolbox_widget)
+        self.regions_combo = QComboBox(right_widget)
+        self.regions_combo.setEditable(False)
+        self.regions_combo.addItem('Generale')
+        for region_name in regions.keys():
+            self.regions_combo.addItem(region_name)
+        self.regions_combo.currentTextChanged.connect(self.change_region)
+        right_layout.addWidget(self.regions_combo)
         main_layout.addWidget(right_widget)
         main_layout.setStretch(0, 1)
         main_layout.setStretch(1, 0)
@@ -340,6 +373,21 @@ class MyWindow(QMainWindow):
 
         # Show the window
         self.show()
+
+    def change_region(self, region_name):
+        if region_name == 'Generale':
+            self.regions_combo.setCurrentIndex(0)
+            self.ax.set_xlim(IMAGE_EXTENT[0:2])
+            self.ax.set_ylim(IMAGE_EXTENT[2:4])
+        else:
+            self.ax.set_xlim(regions[region_name][0])
+            self.ax.set_ylim(regions[region_name][1])
+        self.ax.figure.canvas.draw()
+
+    def on_lims_change(self, event_ax):
+        xl = (round(self.ax.get_xlim()[0]), round(self.ax.get_xlim()[1]))
+        yl = (round(self.ax.get_ylim()[0]), round(self.ax.get_ylim()[1]))
+        print(f'({xl}, {yl})')
 
     def increase_color_index(self):
         self.current_color_index = (self.current_color_index + 1) % len(color_list)
@@ -375,15 +423,15 @@ class MyWindow(QMainWindow):
         if self.mpl_toolbar.mode:
             return
         if event.button == 1:  # Left mouse button
-            print(f"Left click at ({event.xdata}, {event.ydata})")
-            print(px_to_coord((event.xdata, event.ydata)))
+            #print(f"Left click at ({event.xdata}, {event.ydata})")
+            #print(px_to_coord((event.xdata, event.ydata)))
             if self.current_tool:
                 self.current_tool.click_left(event.xdata, event.ydata)
                 self.current_tool.paint()
                 if self.current_label:
                     self.current_label.setText(str(self.current_tool))
         elif event.button == 3:  # Right mouse button
-            print(f"Right click at ({event.xdata}, {event.ydata})")
+            #print(f"Right click at ({event.xdata}, {event.ydata})")
             if self.current_tool:
                 self.current_tool.click_right(event.xdata, event.ydata)
                 self.current_tool.paint()

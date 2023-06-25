@@ -1,7 +1,7 @@
 import sys
 
 from PyQt5.QtCore import QRegularExpression
-from PyQt5.QtGui import QRegularExpressionValidator
+from PyQt5.QtGui import QRegularExpressionValidator, QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QLabel, QMessageBox, QHBoxLayout, \
     QSizePolicy
 import re
@@ -56,6 +56,7 @@ class ScratchpadWindow(QWidget):
         self.text_area = QTextEdit()
         self.enter_pressed = False
         layout.addWidget(self.text_area)
+        self.setWindowIcon(QIcon('pycarteggio.ico'))
 
     def text_changed(self):
         self.enter_pressed = False

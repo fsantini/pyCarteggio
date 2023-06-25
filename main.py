@@ -412,6 +412,8 @@ class MyWindow(QMainWindow):
         # Set the main widget
         self.setCentralWidget(main_widget)
 
+        self.setWindowIcon(QIcon('pycarteggio.ico'))
+
         # Show the window
         self.show()
 

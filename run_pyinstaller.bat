@@ -1,0 +1,2 @@
+pyinstaller --icon=pycarteggio.ico --noconsole --add-data="pycarteggio.ico;." --add-data="Carta Nautica 5D_200dpi.png;." --add-data "README.md;." --add-data "LICENSE;." --name=PyCarteggio  main.py
+ren dist\PyCarteggio\README.md README.txt

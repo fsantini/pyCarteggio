@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>PyCarteggio</title>
+<link rel="icon" href="assets/pycarteggio.ico">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+  <header id="topbar">
+    <h1>PyCarteggio</h1>
+    <div class="toolbar">
+      <button id="btn-home" title="Vista generale">🏠 Home</button>
+      <button id="btn-pan" title="Attiva/disattiva spostamento carta">✋ Sposta</button>
+      <button id="btn-note" title="Apri il blocco note">📝 Note</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="canvas-wrap">
+      <canvas id="chart-canvas"></canvas>
+      <div id="loading">Caricamento carta&hellip;</div>
+    </div>
+
+    <aside id="sidebar">
+      <div id="element-list"></div>
+
+      <div id="mode-toggle" class="mode-toggle" hidden>
+        <span class="mode-hint">Prossimo tocco:</span>
+        <button class="mode-btn" data-action="primary"></button>
+        <button class="mode-btn" data-action="secondary"></button>
+      </div>
+
+      <div id="toolbox">
+        <button id="btn-add-point">Coordinata</button>
+        <button id="btn-add-line">Linea</button>
+        <button id="btn-add-circle">Cerchio</button>
+      </div>
+
+      <label id="region-label">
+        Vista
+        <select id="region-select"></select>
+      </label>
+    </aside>
+  </main>
+</div>
+
+<div id="scratchpad" hidden>
+  <div class="scratchpad-header">
+    <span>Note</span>
+    <button id="btn-scratchpad-close">✕</button>
+  </div>
+  <div class="scratchpad-calc">
+    <label for="expr-input">Calc:</label>
+    <input id="expr-input" type="text" inputmode="decimal" autocomplete="off" placeholder="es. 12.5+3*2">
+    <input id="result-display" type="text" readonly>
+  </div>
+  <div id="calc-error" class="calc-error" hidden></div>
+  <label for="notes-area" class="notes-label">Note:</label>
+  <textarea id="notes-area" placeholder="Scrivi qui i tuoi appunti..."></textarea>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

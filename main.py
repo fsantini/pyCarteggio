@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-CHART_FILE = 'Carta Nautica 5D_200dpi.png'
+CHART_FILE = 'Carta Nautica 5D_400dpi.png'
 IMAGE_EXTENT = None
 
 import matplotlib.pyplot as plt
@@ -29,14 +29,14 @@ from dataclasses import dataclass
 color_list = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown', 'black']
 
 regions = {
-    'Giglio e Argentario': ((4216, 6318), (4132, 2901)),
-    'Talamone e Formiche G': ((4461, 5887), (2878, 1693)),
-    'Montecristo e Sc. Africa': ((520, 2225), (4132, 3488)),
-    'Follonica e Sparviero': ((3476, 5037), (1554, 274)),
-    'Elba': ((775, 2778), (1694, 478)),
-    'Piombino': ((2110, 3493), (899, 0)),
-    'Pianosa': ((479, 1214), (2679, 1911)),
-    'Marina di Grosseto': ((4383, 5697), (2196, 1186))
+    'Giglio e Argentario': ((8432, 12636), (8264, 5802)),
+    'Talamone e Formiche G': ((8922, 11774), (5756, 3386)),
+    'Montecristo e Sc. Africa': ((1040, 4450), (8264, 6976)),
+    'Follonica e Sparviero': ((6952, 10074), (3108, 548)),
+    'Elba': ((1550, 5556), (3388, 956)),
+    'Piombino': ((4220, 6986), (1798, 0)),
+    'Pianosa': ((958, 2428), (5358, 3822)),
+    'Marina di Grosseto': ((8766, 11394), (4392, 2372))
 }
 
 def coord_to_float(deg, primes):
@@ -77,10 +77,10 @@ class Coord:
     longitude: CoordElement
 
 START_COORD = Coord(CoordElement(42,20.0), CoordElement(10, 0.0))
-PIXEL_PER_PRIME_LAT = 106
-PIXEL_PER_PRIME_LONG = 77.25
+PIXEL_PER_PRIME_LAT = 212
+PIXEL_PER_PRIME_LONG = 154.5
 
-START_PX = (472, 3979)
+START_PX = (944, 7958)
 
 def coord_to_px(coord: Coord):
     return START_PX[0] + coord.latitude.to_float() * 60 * PIXEL_PER_PRIME_LONG, \
@@ -93,7 +93,7 @@ def px_to_coord(pixel_location):
     )
 
 class DotPainter:
-    def __init__(self, ax, x=0, y=0, color='red', radius=5):
+    def __init__(self, ax, x=0, y=0, color='red', radius=10):
         self.ax = ax
         self.x = x
         self.y = y
@@ -166,7 +166,7 @@ class CirclePainter:
         self.color = color
         self.radius = radius
         self.circle = Circle((self.x, self.y), radius=self.radius, color=self.color, linewidth=linewidth, fill=False)
-        self.center_cross = self.CenterCross(ax, x, y, 20, color, 1)
+        self.center_cross = self.CenterCross(ax, x, y, 40, color, 1)
         self.ax.add_patch(self.circle)
         self.click_left = self.set_coordinates
         self.click_right = self.set_radius_from_point

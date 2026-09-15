@@ -43,3 +43,19 @@ tracciare il rettangolo sul quale si vuole zoomare. Per tornare alla vista norma
 casetta.
 Deselezionare lo strumento zoom cliccandoci nuovamente sopra prima di poter tracciare o modificare un elemento.
 Dal menu a tendina in basso a destra, si possono selezionare alcune viste predefinite.
+
+## Versione web
+
+Nella cartella `web/` è disponibile una versione dell'applicazione eseguibile in un browser (desktop o tablet),
+senza bisogno di installare Python o dipendenze. Supporta il tocco: un tap posiziona il punto/centro attivo,
+il pulsante "①/②" nella barra laterale seleziona quale punto della linea/cerchio verrà impostato dal tocco
+successivo (equivalente al click sinistro/destro del mouse), il pizzico a due dita zooma e, con "Sposta" attivo,
+un dito trascina la carta.
+
+Per usarla in locale (anche da un tablet sulla stessa rete):
+```
+cd web
+python3 -m http.server 8000
+```
+poi aprire `http://localhost:8000` (o l'indirizzo IP del computer sulla rete locale, dal tablet). In alternativa
+si può pubblicare il contenuto della cartella `web/` su un qualsiasi hosting statico.

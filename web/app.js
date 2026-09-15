@@ -90,6 +90,9 @@ function luminance(hex) {
  * Drawing tools (ported from DotPainter / LinePainter / CirclePainter)
  * ------------------------------------------------------------------- */
 
+const DOT_RADIUS = 10;
+const CROSS_SIZE = 40;
+
 class DotTool {
   constructor(color) {
     this.type = 'dot';
@@ -102,7 +105,7 @@ class DotTool {
   secondary(ix, iy) { this.x = ix; this.y = iy; }
   draw(ctx, scale) {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, DOT_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = this.color;
     ctx.fill();
   }
@@ -174,7 +177,7 @@ class CircleTool {
     ctx.lineWidth = 1.5 / scale;
     ctx.stroke();
 
-    const s = 40;
+    const s = CROSS_SIZE;
     ctx.beginPath();
     ctx.moveTo(this.x - s, this.y); ctx.lineTo(this.x + s, this.y);
     ctx.moveTo(this.x, this.y - s); ctx.lineTo(this.x, this.y + s);
@@ -209,6 +212,8 @@ const img = new Image();
 let imageBounds = null; // {x0,y0,x1,y1} full-image extent
 let view = null;        // currently displayed {x0,y0,x1,y1} in image space
 let panMode = false;
+let zoomMode = false;
+let zoomDrag = null; // { pointerId, x0, y0, x1, y1 } in canvas device-pixel space, while dragging a zoom rectangle
 
 let currentColorIndex = 0;
 let currentTool = null;
@@ -316,6 +321,22 @@ function redraw() {
     item.tool.draw(ctx, t.scale, imageBounds);
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  if (zoomDrag) {
+    const d = dpr();
+    const x = Math.min(zoomDrag.x0, zoomDrag.x1);
+    const y = Math.min(zoomDrag.y0, zoomDrag.y1);
+    const w = Math.abs(zoomDrag.x1 - zoomDrag.x0);
+    const h = Math.abs(zoomDrag.y1 - zoomDrag.y0);
+    ctx.save();
+    ctx.fillStyle = 'rgba(43, 108, 176, 0.15)';
+    ctx.strokeStyle = '#2b6cb0';
+    ctx.lineWidth = 1.5 * d;
+    ctx.setLineDash([6 * d, 4 * d]);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  }
 }
 
 function resizeCanvas() {
@@ -421,9 +442,26 @@ function addObject(kind) {
  * ------------------------------------------------------------------- */
 
 const modeButtons = Array.from(modeToggleEl.querySelectorAll('.mode-btn'));
+const touchInterfaceCheckbox = document.getElementById('touch-interface-checkbox');
+let touchInterfaceEnabled = false;
+
+const TOUCH_INTERFACE_STORAGE_KEY = 'pycarteggio-touch-interface';
+
+function loadTouchInterfacePreference() {
+  try {
+    touchInterfaceEnabled = localStorage.getItem(TOUCH_INTERFACE_STORAGE_KEY) === '1';
+  } catch (_) { /* localStorage unavailable (private mode, etc.) -- default to off */ }
+  touchInterfaceCheckbox.checked = touchInterfaceEnabled;
+}
+
+touchInterfaceCheckbox.addEventListener('change', () => {
+  touchInterfaceEnabled = touchInterfaceCheckbox.checked;
+  try { localStorage.setItem(TOUCH_INTERFACE_STORAGE_KEY, touchInterfaceEnabled ? '1' : '0'); } catch (_) { /* ignore */ }
+  updateModeControls();
+});
 
 function updateModeControls() {
-  if (!currentTool || !TOOL_META[currentTool.type].modeLabels) {
+  if (!touchInterfaceEnabled || !currentTool || !TOOL_META[currentTool.type].modeLabels) {
     modeToggleEl.hidden = true;
     return;
   }
@@ -474,18 +512,26 @@ function pointersMidAndDist() {
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('pointerdown', (e) => {
+  const isMiddle = e.pointerType === 'mouse' && e.button === 1;
+  if (isMiddle) e.preventDefault(); // avoid the browser's middle-click autoscroll cursor
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, {
     x: e.clientX, y: e.clientY,
     startX: e.clientX, startY: e.clientY,
     button: e.button, pointerType: e.pointerType,
+    forcePan: isMiddle,
     t: performance.now(),
   });
   if (pointers.size === 2) {
     const { dist, mid } = pointersMidAndDist();
     pinch = { distPrev: dist, midPrev: mid };
+    zoomDrag = null; // a second finger joining cancels any in-progress zoom rectangle
   } else {
     pinch = null;
+    if (zoomMode && pointers.size === 1 && !isMiddle && e.button !== 2) {
+      const cpx = clientToCanvasPx(e.clientX, e.clientY);
+      zoomDrag = { pointerId: e.pointerId, x0: cpx.x, y0: cpx.y, x1: cpx.x, y1: cpx.y };
+    }
   }
 });
 
@@ -505,7 +551,12 @@ canvas.addEventListener('pointermove', (e) => {
     panByScreenDelta(mid.x - pinch.midPrev.x, mid.y - pinch.midPrev.y);
     pinch = { distPrev: dist, midPrev: mid };
     redraw();
-  } else if (pointers.size === 1 && panMode) {
+  } else if (zoomDrag && zoomDrag.pointerId === e.pointerId && pointers.size === 1) {
+    const cpx = clientToCanvasPx(e.clientX, e.clientY);
+    zoomDrag.x1 = cpx.x;
+    zoomDrag.y1 = cpx.y;
+    redraw();
+  } else if (pointers.size === 1 && (panMode || p.forcePan)) {
     panByScreenDelta(e.clientX - prevX, e.clientY - prevY);
     redraw();
   }
@@ -518,10 +569,24 @@ function onPointerEnd(e) {
   if (!p) return;
   try { canvas.releasePointerCapture(e.pointerId); } catch (_) { /* ignore */ }
 
+  if (zoomDrag && zoomDrag.pointerId === e.pointerId) {
+    const rect = zoomDrag;
+    zoomDrag = null;
+    const moved = Math.hypot(rect.x1 - rect.x0, rect.y1 - rect.y0);
+    if (moved >= 10) {
+      const c0 = canvasPxToImage(rect.x0, rect.y0);
+      const c1 = canvasPxToImage(rect.x1, rect.y1);
+      setView(box([c0.x, c1.x], [c0.y, c1.y]));
+    } else {
+      redraw(); // just clear the (negligible) selection overlay
+    }
+    return;
+  }
+
   if (pointers.size === 0) {
     const moved = Math.hypot(e.clientX - p.startX, e.clientY - p.startY);
     const duration = performance.now() - p.t;
-    if (!panMode && moved < 8 && duration < 600) {
+    if (!panMode && !zoomMode && !p.forcePan && moved < 8 && duration < 600) {
       const cpx = clientToCanvasPx(e.clientX, e.clientY);
       const ipt = canvasPxToImage(cpx.x, cpx.y);
       if (p.pointerType === 'mouse') {
@@ -551,9 +616,31 @@ canvas.addEventListener('wheel', (e) => {
 document.getElementById('btn-home').addEventListener('click', goHome);
 
 const panBtn = document.getElementById('btn-pan');
+const zoomBtn = document.getElementById('btn-zoom');
+
 panBtn.addEventListener('click', () => {
   panMode = !panMode;
   panBtn.classList.toggle('active', panMode);
+  if (panMode && zoomMode) {
+    zoomMode = false;
+    zoomDrag = null;
+    zoomBtn.classList.remove('active');
+    canvas.classList.remove('zoom-cursor');
+  }
+});
+
+zoomBtn.addEventListener('click', () => {
+  zoomMode = !zoomMode;
+  zoomBtn.classList.toggle('active', zoomMode);
+  canvas.classList.toggle('zoom-cursor', zoomMode);
+  if (zoomMode && panMode) {
+    panMode = false;
+    panBtn.classList.remove('active');
+  }
+  if (!zoomMode) {
+    zoomDrag = null;
+    redraw();
+  }
 });
 
 document.getElementById('btn-add-point').addEventListener('click', () => addObject('dot'));
@@ -583,6 +670,7 @@ function populateRegions() {
  * ------------------------------------------------------------------- */
 
 const scratchpad = document.getElementById('scratchpad');
+const notesArea = document.getElementById('notes-area');
 const exprInput = document.getElementById('expr-input');
 const resultDisplay = document.getElementById('result-display');
 const calcError = document.getElementById('calc-error');
@@ -681,6 +769,239 @@ document.getElementById('btn-scratchpad-close').addEventListener('click', () => 
   scratchpad.hidden = true;
 });
 
+/* Dragging the note panel around the window */
+const scratchpadHeader = scratchpad.querySelector('.scratchpad-header');
+let scratchDrag = null; // { pointerId, offsetX, offsetY }
+
+function clampScratchpadPosition() {
+  if (scratchpad.style.left === '') return; // not yet dragged, keep CSS default position
+  const maxLeft = Math.max(0, window.innerWidth - scratchpad.offsetWidth);
+  const maxTop = Math.max(0, window.innerHeight - scratchpad.offsetHeight);
+  const left = Math.min(Math.max(0, parseFloat(scratchpad.style.left) || 0), maxLeft);
+  const top = Math.min(Math.max(0, parseFloat(scratchpad.style.top) || 0), maxTop);
+  scratchpad.style.left = `${left}px`;
+  scratchpad.style.top = `${top}px`;
+}
+
+scratchpadHeader.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button')) return; // let the close button work normally
+  const rect = scratchpad.getBoundingClientRect();
+  scratchDrag = { pointerId: e.pointerId, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+  scratchpad.style.left = `${rect.left}px`;
+  scratchpad.style.top = `${rect.top}px`;
+  scratchpad.style.right = 'auto';
+  scratchpadHeader.setPointerCapture(e.pointerId);
+});
+
+scratchpadHeader.addEventListener('pointermove', (e) => {
+  if (!scratchDrag || scratchDrag.pointerId !== e.pointerId) return;
+  const maxLeft = Math.max(0, window.innerWidth - scratchpad.offsetWidth);
+  const maxTop = Math.max(0, window.innerHeight - scratchpad.offsetHeight);
+  const left = Math.min(Math.max(0, e.clientX - scratchDrag.offsetX), maxLeft);
+  const top = Math.min(Math.max(0, e.clientY - scratchDrag.offsetY), maxTop);
+  scratchpad.style.left = `${left}px`;
+  scratchpad.style.top = `${top}px`;
+});
+
+function endScratchDrag(e) {
+  if (scratchDrag && scratchDrag.pointerId === e.pointerId) scratchDrag = null;
+}
+scratchpadHeader.addEventListener('pointerup', endScratchDrag);
+scratchpadHeader.addEventListener('pointercancel', endScratchDrag);
+
+window.addEventListener('resize', clampScratchpadPosition);
+
+/* ---------------------------------------------------------------------
+ * Workspace save / load (points, lines, circles, notes -> JSON file)
+ * ------------------------------------------------------------------- */
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function serializeTool(tool) {
+  const base = { type: tool.type, color: tool.color, nextAction: tool.nextAction };
+  if (tool.type === 'dot') {
+    return { ...base, x: tool.x, y: tool.y };
+  }
+  if (tool.type === 'line') {
+    return { ...base, x1: tool.x1, y1: tool.y1, x2: tool.x2, y2: tool.y2, p1set: tool.p1set, p2set: tool.p2set };
+  }
+  return { ...base, x: tool.x, y: tool.y, radius: tool.radius };
+}
+
+function toolFromData(data) {
+  let tool;
+  if (data.type === 'dot') tool = new DotTool(data.color);
+  else if (data.type === 'line') tool = new LineTool(data.color);
+  else tool = new CircleTool(data.color);
+  Object.assign(tool, data);
+  return tool;
+}
+
+function serializeWorkspace() {
+  return {
+    format: 'pycarteggio-workspace',
+    version: 1,
+    savedAt: new Date().toISOString(),
+    view: view ? { ...view } : null,
+    notes: notesArea.value,
+    items: items.map((it) => serializeTool(it.tool)),
+  };
+}
+
+function saveWorkspace() {
+  const blob = new Blob([JSON.stringify(serializeWorkspace(), null, 2)], { type: 'application/json' });
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  downloadBlob(blob, `pycarteggio-workspace-${stamp}.json`);
+}
+
+function applyWorkspace(data) {
+  if (!Array.isArray(data.items)) {
+    alert('File non valido: non è un workspace di PyCarteggio.');
+    return;
+  }
+  if (items.length > 0 && !window.confirm('Caricare il workspace sostituirà gli elementi attuali. Continuare?')) {
+    return;
+  }
+  for (const it of items.slice()) removeItem(it);
+  currentColorIndex = 0;
+
+  notesArea.value = typeof data.notes === 'string' ? data.notes : '';
+
+  for (const itemData of data.items) {
+    const tool = toolFromData(itemData);
+    const item = createListRow(tool.label(), { hex: tool.color }, tool);
+    items.push(item);
+    elementListEl.appendChild(item.row);
+    currentColorIndex++;
+  }
+
+  if (items.length) {
+    selectItem(items[items.length - 1]);
+  } else {
+    currentTool = null;
+    currentItem = null;
+    updateModeControls();
+  }
+
+  if (data.view && imageBounds) setView(data.view);
+  else redraw();
+}
+
+function loadWorkspaceFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try {
+      data = JSON.parse(reader.result);
+    } catch (err) {
+      alert('Il file selezionato non è un JSON valido.');
+      return;
+    }
+    applyWorkspace(data);
+  };
+  reader.onerror = () => alert('Impossibile leggere il file selezionato.');
+  reader.readAsText(file);
+}
+
+document.getElementById('btn-save-workspace').addEventListener('click', saveWorkspace);
+
+const loadWorkspaceInput = document.getElementById('load-workspace-input');
+document.getElementById('btn-load-workspace').addEventListener('click', () => {
+  loadWorkspaceInput.value = '';
+  loadWorkspaceInput.click();
+});
+loadWorkspaceInput.addEventListener('change', () => {
+  const file = loadWorkspaceInput.files[0];
+  if (file) loadWorkspaceFile(file);
+});
+
+/* ---------------------------------------------------------------------
+ * Export current view as PNG / SVG
+ * ------------------------------------------------------------------- */
+
+function exportUnavailableMessage(err) {
+  console.error(err);
+  alert('Esportazione non disponibile. Se hai aperto questa pagina come file locale (file://), avviala invece tramite un server web (es. "python3 -m http.server") e riprova.');
+}
+
+function exportPNG() {
+  try {
+    canvas.toBlob((blob) => {
+      if (!blob) { exportUnavailableMessage(new Error('toBlob returned null')); return; }
+      downloadBlob(blob, 'pycarteggio-vista.png');
+    }, 'image/png');
+  } catch (err) {
+    exportUnavailableMessage(err);
+  }
+}
+
+function svgLineExtent(tool, bounds) {
+  const dx = tool.x2 - tool.x1;
+  const dy = tool.y2 - tool.y1;
+  if (dx === 0) return { xs: [tool.x1, tool.x1], ys: [bounds.y0, bounds.y1] };
+  const slope = dy / dx;
+  return {
+    xs: [bounds.x0, bounds.x1],
+    ys: [tool.y1 + slope * (bounds.x0 - tool.x1), tool.y1 + slope * (bounds.x1 - tool.x1)],
+  };
+}
+
+function exportSVG() {
+  if (!view || !imageBounds) return;
+  try {
+    const vw = view.x1 - view.x0;
+    const vh = view.y1 - view.y0;
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round(vw));
+    off.height = Math.max(1, Math.round(vh));
+    off.getContext('2d').drawImage(img, view.x0, view.y0, vw, vh, 0, 0, off.width, off.height);
+    const bgDataUrl = off.toDataURL('image/png');
+
+    const t = computeTransform();
+    const lineStroke = (2 / t.scale).toFixed(2);
+    const circleStroke = (1.5 / t.scale).toFixed(2);
+    const dx = -view.x0, dy = -view.y0;
+
+    const parts = [];
+    parts.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${off.width}" height="${off.height}" viewBox="0 0 ${off.width} ${off.height}">`);
+    parts.push(`<image href="${bgDataUrl}" xlink:href="${bgDataUrl}" x="0" y="0" width="${off.width}" height="${off.height}"/>`);
+
+    for (const item of items) {
+      const tool = item.tool;
+      if (tool.type === 'dot') {
+        parts.push(`<circle cx="${tool.x + dx}" cy="${tool.y + dy}" r="${DOT_RADIUS}" fill="${tool.color}"/>`);
+      } else if (tool.type === 'line') {
+        if (!(tool.p1set && tool.p2set)) continue;
+        const { xs, ys } = svgLineExtent(tool, imageBounds);
+        parts.push(`<line x1="${xs[0] + dx}" y1="${ys[0] + dy}" x2="${xs[1] + dx}" y2="${ys[1] + dy}" stroke="${tool.color}" stroke-width="${lineStroke}"/>`);
+      } else if (tool.type === 'circle') {
+        const cx = tool.x + dx, cy = tool.y + dy;
+        parts.push(`<circle cx="${cx}" cy="${cy}" r="${tool.radius}" fill="none" stroke="${tool.color}" stroke-width="${circleStroke}"/>`);
+        parts.push(`<line x1="${cx - CROSS_SIZE}" y1="${cy}" x2="${cx + CROSS_SIZE}" y2="${cy}" stroke="${tool.color}" stroke-width="${circleStroke}"/>`);
+        parts.push(`<line x1="${cx}" y1="${cy - CROSS_SIZE}" x2="${cx}" y2="${cy + CROSS_SIZE}" stroke="${tool.color}" stroke-width="${circleStroke}"/>`);
+      }
+    }
+    parts.push('</svg>');
+
+    const blob = new Blob([parts.join('\n')], { type: 'image/svg+xml' });
+    downloadBlob(blob, 'pycarteggio-vista.svg');
+  } catch (err) {
+    exportUnavailableMessage(err);
+  }
+}
+
+document.getElementById('btn-export-png').addEventListener('click', exportPNG);
+document.getElementById('btn-export-svg').addEventListener('click', exportSVG);
+
 /* ---------------------------------------------------------------------
  * Boot
  * ------------------------------------------------------------------- */
@@ -688,6 +1009,7 @@ document.getElementById('btn-scratchpad-close').addEventListener('click', () => 
 window.addEventListener('resize', resizeCanvas);
 new ResizeObserver(resizeCanvas).observe(canvasWrap);
 
+loadTouchInterfacePreference();
 populateRegions();
 
 img.onload = () => {

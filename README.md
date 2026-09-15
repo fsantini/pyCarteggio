@@ -48,9 +48,25 @@ Dal menu a tendina in basso a destra, si possono selezionare alcune viste predef
 
 Nella cartella `web/` è disponibile una versione dell'applicazione eseguibile in un browser (desktop o tablet),
 senza bisogno di installare Python o dipendenze. Supporta il tocco: un tap posiziona il punto/centro attivo,
-il pulsante "①/②" nella barra laterale seleziona quale punto della linea/cerchio verrà impostato dal tocco
-successivo (equivalente al click sinistro/destro del mouse), il pizzico a due dita zooma e, con "Sposta" attivo,
-un dito trascina la carta.
+il pizzico a due dita zooma e, con "Sposta" attivo (oppure tenendo premuto il tasto centrale del mouse), un
+dito o il mouse trascina la carta. Il pulsante "Zoom" attiva lo strumento per ingrandire su un rettangolo:
+trascinando sulla carta si disegna il riquadro dell'area da ingrandire, e lo strumento resta attivo per
+ripetere l'operazione finché non lo si disattiva cliccandoci di nuovo sopra (esattamente come nella versione
+desktop).
+
+Su un dispositivo touch, attivando la casella "Interfaccia touch" nella barra laterale compare il controllo
+"Prossimo tocco" (pulsanti "①/②") per lo strumento Linea/Cerchio, che seleziona quale punto verrà impostato dal
+tocco successivo (equivalente al click sinistro/destro del mouse, che invece funziona sempre normalmente anche
+a casella disattivata). La preferenza resta salvata nel browser tra una sessione e l'altra.
+
+Il pannello "Note" si può trascinare liberamente ovunque nella finestra tramite la sua barra del titolo.
+
+I pulsanti in basso a destra permettono di:
+- **Salva / Carica**: salvare punti, linee, cerchi e note correnti in un file JSON, per riprendere l'esercizio
+  in un secondo momento (anche su un altro dispositivo);
+- **PNG / SVG**: esportare la vista attualmente visibile (con gli elementi disegnati) come immagine. Il PNG è
+  una semplice istantanea dello schermo; l'SVG incorpora il ritaglio della carta come immagine raster ma disegna
+  punti, linee e cerchi come vettori, così restano nitidi anche ingrandendo il file in un editor vettoriale.
 
 Per usarla in locale (anche da un tablet sulla stessa rete):
 ```
@@ -58,4 +74,6 @@ cd web
 python3 -m http.server 8000
 ```
 poi aprire `http://localhost:8000` (o l'indirizzo IP del computer sulla rete locale, dal tablet). In alternativa
-si può pubblicare il contenuto della cartella `web/` su un qualsiasi hosting statico.
+si può pubblicare il contenuto della cartella `web/` su un qualsiasi hosting statico. Le funzioni di esportazione
+(PNG/SVG) richiedono che la pagina sia servita tramite HTTP(S): aprendo `index.html` direttamente come file locale
+(`file://`) il browser blocca l'esportazione per motivi di sicurezza.

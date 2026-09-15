@@ -15,6 +15,7 @@
     <div class="toolbar">
       <button id="btn-home" title="Vista generale">🏠 Home</button>
       <button id="btn-pan" title="Attiva/disattiva spostamento carta">✋ Sposta</button>
+      <button id="btn-zoom" title="Attiva/disattiva zoom su rettangolo">🔍 Zoom</button>
       <button id="btn-note" title="Apri il blocco note">📝 Note</button>
     </div>
   </header>
@@ -27,6 +28,11 @@
 
     <aside id="sidebar">
       <div id="element-list"></div>
+
+      <label id="touch-interface-label">
+        <input type="checkbox" id="touch-interface-checkbox">
+        Interfaccia touch
+      </label>
 
       <div id="mode-toggle" class="mode-toggle" hidden>
         <span class="mode-hint">Prossimo tocco:</span>
@@ -44,6 +50,14 @@
         Vista
         <select id="region-select"></select>
       </label>
+
+      <div id="workspace-actions">
+        <button id="btn-save-workspace" title="Salva punti, linee, cerchi e note in un file JSON">💾 Salva</button>
+        <button id="btn-load-workspace" title="Carica un workspace salvato in precedenza">📂 Carica</button>
+        <button id="btn-export-png" title="Esporta la vista attuale come immagine PNG">🖼️ PNG</button>
+        <button id="btn-export-svg" title="Esporta la vista attuale come immagine vettoriale SVG">🖋️ SVG</button>
+        <input id="load-workspace-input" type="file" accept="application/json,.json" hidden>
+      </div>
     </aside>
   </main>
 </div>

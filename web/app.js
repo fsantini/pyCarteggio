@@ -769,6 +769,29 @@ document.getElementById('btn-scratchpad-close').addEventListener('click', () => 
   scratchpad.hidden = true;
 });
 
+/* ---------------------------------------------------------------------
+ * Instructions modal
+ * ------------------------------------------------------------------- */
+
+const instructionsBackdrop = document.getElementById('instructions-backdrop');
+
+function openInstructions() {
+  instructionsBackdrop.hidden = false;
+}
+
+function closeInstructions() {
+  instructionsBackdrop.hidden = true;
+}
+
+document.getElementById('btn-instructions').addEventListener('click', openInstructions);
+document.getElementById('btn-instructions-close').addEventListener('click', closeInstructions);
+instructionsBackdrop.addEventListener('click', (e) => {
+  if (e.target === instructionsBackdrop) closeInstructions(); // click on the dimmed backdrop, not the modal itself
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !instructionsBackdrop.hidden) closeInstructions();
+});
+
 /* Dragging the note panel around the window */
 const scratchpadHeader = scratchpad.querySelector('.scratchpad-header');
 let scratchDrag = null; // { pointerId, offsetX, offsetY }

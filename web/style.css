@@ -312,6 +312,90 @@ button.active {
   resize: vertical;
 }
 
+#instructions-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+#instructions-modal {
+  width: min(640px, 100%);
+  max-height: min(80vh, 720px);
+  background: var(--panel-bg);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.instructions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.instructions-header button {
+  padding: 4px 10px;
+}
+
+.instructions-body {
+  padding: 4px 20px 16px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.instructions-body h3 {
+  margin: 18px 0 6px;
+  font-size: 1rem;
+}
+
+.instructions-body h3:first-child {
+  margin-top: 12px;
+}
+
+.instructions-body p,
+.instructions-body ul {
+  margin: 6px 0;
+  font-size: 0.9rem;
+}
+
+.instructions-body ul {
+  padding-left: 1.2em;
+}
+
+.instructions-body li {
+  margin-bottom: 6px;
+}
+
+.instructions-body code {
+  background: rgba(127, 127, 127, 0.2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.instructions-video-note {
+  padding: 8px 10px;
+  background: rgba(43, 108, 176, 0.1);
+  border: 1px solid rgba(43, 108, 176, 0.3);
+  border-radius: 6px;
+}
+
+.instructions-video-note a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 @media (max-width: 760px) {
   #main {
     flex-direction: column;

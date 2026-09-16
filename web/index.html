@@ -17,6 +17,7 @@
       <button id="btn-pan" title="Attiva/disattiva spostamento carta">✋ Sposta</button>
       <button id="btn-zoom" title="Attiva/disattiva zoom su rettangolo">🔍 Zoom</button>
       <button id="btn-note" title="Apri il blocco note">📝 Note</button>
+      <button id="btn-instructions" title="Come si usa l'applicazione">❓ Istruzioni</button>
     </div>
   </header>
 
@@ -75,6 +76,81 @@
   <div id="calc-error" class="calc-error" hidden></div>
   <label for="notes-area" class="notes-label">Note:</label>
   <textarea id="notes-area" placeholder="Scrivi qui i tuoi appunti..."></textarea>
+</div>
+
+<div id="instructions-backdrop" hidden>
+  <div id="instructions-modal" role="dialog" aria-modal="true" aria-labelledby="instructions-title">
+    <div class="instructions-header">
+      <span id="instructions-title">Istruzioni</span>
+      <button id="btn-instructions-close">✕</button>
+    </div>
+    <div class="instructions-body">
+      <p class="instructions-video-note">📺 È disponibile anche un
+      <a href="https://www.youtube.com/watch?v=BjDTBG43okI" target="_blank" rel="noopener">video tutorial su YouTube</a>
+      (si riferisce alla versione desktop in Python dell'applicazione, non a questa versione web, ma gli
+      strumenti di disegno funzionano allo stesso modo).</p>
+
+      <h3>Gli strumenti</h3>
+      <p>I tre pulsanti "Coordinata", "Linea" e "Cerchio" nella barra laterale creano un nuovo elemento sulla
+      carta, che diventa lo strumento attivo. Ogni elemento creato compare nella lista a sinistra dei pulsanti,
+      con un colore diverso; il testo mostra le coordinate, la direzione o il raggio a seconda dello strumento.
+      Il pulsante "Edit" di un elemento lo riattiva per poterlo correggere; "Del" lo elimina.</p>
+      <ul>
+        <li><strong>Coordinata</strong>: un solo punto sulla carta; mostra le coordinate geografiche.</li>
+        <li><strong>Linea</strong>: due punti (il primo e il secondo); la retta viene prolungata su tutta la
+        carta e ne vengono mostrate le due direzioni possibili (a chi risolve l'esercizio la scelta di quella
+        corretta).</li>
+        <li><strong>Cerchio</strong>: un centro e un punto che ne definisce il raggio, mostrato in miglia
+        nautiche.</li>
+      </ul>
+
+      <h3>💻 Su computer (mouse e tastiera)</h3>
+      <ul>
+        <li><strong>Click sinistro</strong>: imposta il primo punto/centro dello strumento attivo.</li>
+        <li><strong>Click destro</strong>: imposta il secondo punto/il raggio dello strumento attivo.</li>
+        <li><strong>Rotella del mouse</strong>: zoom avanti/indietro centrato sul cursore.</li>
+        <li><strong>Tasto centrale del mouse (tenuto premuto e trascinato)</strong>: sposta la carta, in
+        qualsiasi momento, senza dover attivare "Sposta".</li>
+        <li><strong>Pulsante "Sposta"</strong>: attiva il trascinamento della carta con il click sinistro
+        (utile con un trackpad); si disattiva ricliccandolo.</li>
+        <li><strong>Pulsante "Zoom"</strong>: trascinando con il click sinistro si disegna un rettangolo e,
+        al rilascio, la vista si ingrandisce su quell'area. Resta attivo per ripetere l'operazione più volte,
+        finché non lo si disattiva ricliccandolo (in quel momento il click sinistro torna a posizionare gli
+        elementi).</li>
+        <li><strong>Pulsante "Home"</strong>: torna alla vista generale della carta.</li>
+        <li>Il menu a tendina "Vista" contiene alcune inquadrature predefinite delle zone più usate.</li>
+        <li>Il pannello "Note" si può trascinare tenendo premuta la sua barra del titolo.</li>
+      </ul>
+
+      <h3>📱 Su tablet / touch</h3>
+      <ul>
+        <li><strong>Un tocco</strong>: posiziona il punto/centro dello strumento attivo (equivalente al click
+        sinistro).</li>
+        <li>Per gli strumenti Linea e Cerchio, che hanno bisogno di due punti, attivare la casella
+        <strong>"Interfaccia touch"</strong> nella barra laterale: comparirà il controllo "Prossimo tocco" con
+        i pulsanti "① Punto 1/Centro" e "② Punto 2/Raggio" per scegliere quale punto verrà impostato dal tocco
+        successivo. Dopo ogni tocco lo strumento passa automaticamente all'altro punto.</li>
+        <li><strong>Pizzico con due dita</strong>: zoom avanti/indietro (funziona sempre, senza dover attivare
+        nulla).</li>
+        <li><strong>Un dito, con "Sposta" attivo</strong>: trascina la carta.</li>
+        <li><strong>Un dito, con "Zoom" attivo</strong>: disegna un rettangolo; sollevando il dito la vista si
+        ingrandisce su quell'area. Come su desktop, resta attivo finché non lo si disattiva.</li>
+        <li>Quando "Sposta" o "Zoom" sono attivi, il tocco non posiziona elementi: disattivarli prima di
+        continuare a disegnare.</li>
+      </ul>
+
+      <h3>Note, salvataggio ed esportazione</h3>
+      <ul>
+        <li>Il pulsante <strong>"Note"</strong> apre un pannello con una piccola calcolatrice e un'area per
+        appunti liberi.</li>
+        <li><strong>"Salva" / "Carica"</strong> salvano o ricaricano punti, linee, cerchi e note in un file
+        JSON, per riprendere l'esercizio in un secondo momento.</li>
+        <li><strong>"PNG" / "SVG"</strong> esportano la vista attualmente visibile come immagine (l'SVG mantiene
+        gli elementi disegnati come vettori nitidi a qualunque ingrandimento). Richiedono che la pagina sia
+        aperta tramite un server web (non funzionano aprendo il file <code>index.html</code> direttamente).</li>
+      </ul>
+    </div>
+  </div>
 </div>
 
 <script src="app.js"></script>

@@ -100,9 +100,10 @@ class DotTool {
     this.x = 0;
     this.y = 0;
     this.nextAction = 'primary';
+    this.secondaryUsed = false;
   }
   primary(ix, iy) { this.x = ix; this.y = iy; }
-  secondary(ix, iy) { this.x = ix; this.y = iy; }
+  secondary(ix, iy) { this.x = ix; this.y = iy; this.secondaryUsed = true; }
   draw(ctx, scale) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, DOT_RADIUS, 0, Math.PI * 2);
@@ -124,9 +125,10 @@ class LineTool {
     this.p1set = false;
     this.p2set = false;
     this.nextAction = 'primary';
+    this.secondaryUsed = false;
   }
   primary(ix, iy) { this.p1set = true; this.x1 = ix; this.y1 = iy; }
-  secondary(ix, iy) { this.p2set = true; this.x2 = ix; this.y2 = iy; }
+  secondary(ix, iy) { this.p2set = true; this.x2 = ix; this.y2 = iy; this.secondaryUsed = true; }
   draw(ctx, scale, bounds) {
     if (!(this.p1set && this.p2set)) return;
     const dx = this.x2 - this.x1;
@@ -163,12 +165,14 @@ class CircleTool {
     this.x = 0; this.y = 0;
     this.radius = 1;
     this.nextAction = 'primary';
+    this.secondaryUsed = false;
   }
   primary(ix, iy) { this.x = ix; this.y = iy; }
   secondary(ix, iy) {
     const r = Math.hypot(iy - this.y, ix - this.x);
     if (r === 0) return;
     this.radius = r;
+    this.secondaryUsed = true;
   }
   draw(ctx, scale) {
     ctx.beginPath();
@@ -488,8 +492,9 @@ modeButtons.forEach((btn) => {
 function performAction(ix, iy, explicitAction) {
   if (!currentTool) return;
   const action = explicitAction || currentTool.nextAction;
+  const wasFirstCycle = !currentTool.secondaryUsed;
   currentTool[action](ix, iy);
-  currentTool.nextAction = action === 'primary' ? 'secondary' : 'primary';
+  if (action === 'primary' && wasFirstCycle) currentTool.nextAction = 'secondary';
   if (currentItem) updateLabelText(currentItem);
   updateModeControls();
   redraw();
